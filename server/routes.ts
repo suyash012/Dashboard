@@ -16,9 +16,9 @@ const OPENWEATHERMAP_API = 'https://api.openweathermap.org/data/2.5';
 const COINCAP_API = 'https://api.coincap.io/v2';
 const NEWSDATA_API = 'https://newsdata.io/api/1/news';
 
-// Periodic intervals in milliseconds
-const CRYPTO_UPDATE_INTERVAL = 30000; // 30 seconds
-const WEATHER_ALERT_INTERVAL = 60000; // 60 seconds
+// Periodic intervals in milliseconds (more frequent for testing)
+const CRYPTO_UPDATE_INTERVAL = 15000; // 15 seconds
+const WEATHER_ALERT_INTERVAL = 10000; // 10 seconds
 
 // Weather and crypto data we want to track
 const TRACKED_CITIES = ['New York', 'London', 'Tokyo'];
@@ -450,8 +450,10 @@ function setupWebSocketServer(server: Server) {
               lastUpdated: new Date(),
             });
             
-            // Send update to clients if change is significant
-            if (Math.abs(priceChange) > 0.5) {
+            // Send update to clients even for small changes (for testing)
+            // Lowered threshold to catch more price changes
+            if (Math.abs(priceChange) > 0.01) {
+              console.log(`Sending price alert to clients: ${crypto.name} changed by ${priceChange.toFixed(2)}%`);
               broadcast({
                 type: 'price_alert',
                 data: {
@@ -498,7 +500,8 @@ function setupWebSocketServer(server: Server) {
   // Set up periodic weather alerts (simulated)
   setInterval(async () => {
     try {
-      if (Math.random() > 0.7) { // Only send alerts occasionally
+      // Increased frequency - send alerts more often for testing
+      if (Math.random() > 0.3) { 
         const city = TRACKED_CITIES[Math.floor(Math.random() * TRACKED_CITIES.length)];
         const weather = await storage.getWeatherByCity(city);
         
@@ -514,6 +517,8 @@ function setupWebSocketServer(server: Server) {
           ];
           
           const alert = alerts[Math.floor(Math.random() * alerts.length)];
+          
+          console.log(`Sending weather alert to clients: ${alert}`);
           
           // Send alert to clients
           broadcast({
