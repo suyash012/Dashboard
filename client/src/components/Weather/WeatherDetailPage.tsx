@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Star, Wind, Droplets, Eye, Thermometer } from 'lucide-react';
-import { Link } from 'wouter';
 import {
   LineChart,
   Line,
@@ -42,11 +41,12 @@ export function WeatherDetailPage({ city }: WeatherDetailPageProps) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center mb-6">
-          <Link href="/">
-            <a className="mr-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
-              <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-            </a>
-          </Link>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="mr-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          </button>
           <Skeleton className="h-8 w-48" />
         </div>
         
@@ -79,11 +79,12 @@ export function WeatherDetailPage({ city }: WeatherDetailPageProps) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center mb-6">
-          <Link href="/">
-            <a className="mr-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
-              <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-            </a>
-          </Link>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="mr-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          </button>
           <h1 className="text-2xl font-bold">Weather for {city}</h1>
         </div>
         
@@ -112,11 +113,12 @@ export function WeatherDetailPage({ city }: WeatherDetailPageProps) {
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Link href="/">
-            <a className="mr-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
-              <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-            </a>
-          </Link>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="mr-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          </button>
           <h1 className="text-2xl font-bold">Weather for {city}</h1>
         </div>
         
