@@ -367,9 +367,30 @@ async function fetchAndStoreNewsData() {
 
 // Initialize WebSocket server and handle client connections
 function setupWebSocketServer(server: Server) {
-  const wss = new WebSocketServer({ server, path: '/ws' });
+  // Check if the server already has a WebSocket server associated
+  if ((server as any)._webSocketServer) {
+    console.log('WebSocket server already initialized, skipping...');
+    return (server as any)._webSocketServer;
+  }
+  
+  const wss = new WebSocketServer({ 
+    noServer: true,  // Important: Don't attach to server directly
+    path: '/ws'
+  });
   
   const clients = new Map<string, WebSocket>();
+  
+  // Handle upgrade manually to avoid conflicts
+  server.on('upgrade', (request, socket, head) => {
+    const pathname = new URL(request.url || '', `http://${request.headers.host}`).pathname;
+    
+    // Only handle connections to our specific path
+    if (pathname === '/ws') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    }
+  });
   
   // Handle new connections
   wss.on('connection', (ws) => {
@@ -389,6 +410,9 @@ function setupWebSocketServer(server: Server) {
       console.log(`Received message from client ${clientId}: ${message}`);
     });
   });
+  
+  // Store the WebSocket server instance on the HTTP server
+  (server as any)._webSocketServer = wss;
   
   // Function to broadcast messages to all connected clients
   const broadcast = (message: any) => {
@@ -621,8 +645,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create and configure the HTTP server
   const httpServer = createServer(app);
   
-  // Set up WebSocket server on the same HTTP server
+  // Set up WebSocket server on the HTTP server
   setupWebSocketServer(httpServer);
-
+  
   return httpServer;
 }
