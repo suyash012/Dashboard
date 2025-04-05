@@ -2,7 +2,6 @@ import { Card } from '@/components/ui/card';
 import { WeatherData } from '@/lib/redux/slices/weatherSlice';
 import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks';
 import { toggleFavoriteCity } from '@/lib/redux/slices/favoritesSlice';
-import { Link } from 'wouter';
 import { Star } from 'lucide-react';
 
 interface WeatherCardProps {
@@ -27,14 +26,15 @@ export function WeatherCard({ data, loading, error }: WeatherCardProps) {
         <div className="p-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Weather</h3>
-            <Link href="/weather/New%20York">
-              <a className="text-white/80 hover:text-white text-sm flex items-center">
-                View All
-                <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-            </Link>
+            <button 
+              onClick={() => window.location.href = '/weather/New%20York'}
+              className="text-white/80 hover:text-white text-sm flex items-center"
+            >
+              View All
+              <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         </div>
         <div className="p-5 flex justify-center items-center h-64">
@@ -71,45 +71,51 @@ export function WeatherCard({ data, loading, error }: WeatherCardProps) {
       <div className="p-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Weather</h3>
-          <Link href="/weather/New%20York">
-            <a className="text-white/80 hover:text-white text-sm flex items-center">
-              View All
-              <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-          </Link>
+          <button 
+            onClick={() => window.location.href = '/weather/New%20York'}
+            className="text-white/80 hover:text-white text-sm flex items-center"
+          >
+            View All
+            <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
       </div>
       
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {data?.map((city) => (
-          <Link key={city.city} href={`/weather/${encodeURIComponent(city.city)}`}>
-            <a className="block p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white flex items-center">
-                    {city.city}
-                    <Star
-                      className={`h-4 w-4 ml-1 cursor-pointer ${
-                        favoriteCities.includes(city.city) ? 'text-amber-400 fill-amber-400' : 'text-gray-400'
-                      }`}
-                      onClick={(e) => handleToggleFavorite(city.city, e)}
-                    />
-                  </h4>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">{city.condition}</p>
+          <div 
+            key={city.city}
+            onClick={() => window.location.href = `/weather/${encodeURIComponent(city.city)}`}
+            className="block p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center">
+                  {city.city}
+                  <Star
+                    className={`h-4 w-4 ml-1 cursor-pointer ${
+                      favoriteCities.includes(city.city) ? 'text-amber-400 fill-amber-400' : 'text-gray-400'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent navigation when clicking the star
+                      handleToggleFavorite(city.city, e);
+                    }}
+                  />
+                </h4>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">{city.condition}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {Math.round(city.temp)}°C
                 </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {Math.round(city.temp)}°C
-                  </div>
-                  <div className="text-gray-500 dark:text-gray-400 text-sm">
-                    Humidity: {city.humidity}%
-                  </div>
+                <div className="text-gray-500 dark:text-gray-400 text-sm">
+                  Humidity: {city.humidity}%
                 </div>
               </div>
-            </a>
-          </Link>
+            </div>
+          </div>
         ))}
       </div>
     </Card>

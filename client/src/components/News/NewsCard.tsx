@@ -55,12 +55,15 @@ export function NewsCard() {
       <div className="p-5 bg-gradient-to-r from-violet-500 to-violet-600 text-white">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Crypto News</h3>
-          <a href="#" className="text-white/80 hover:text-white text-sm flex items-center">
+          <button 
+            onClick={() => window.open('https://cryptonews.com', '_blank')}
+            className="text-white/80 hover:text-white text-sm flex items-center"
+          >
             More News
             <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
             </svg>
-          </a>
+          </button>
         </div>
       </div>
       
@@ -71,12 +74,10 @@ export function NewsCard() {
           </div>
         ) : (
           articles.slice(0, 5).map((article) => (
-            <a
+            <div
               key={article.id}
-              href={article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              onClick={() => window.open(article.url, '_blank')}
+              className="block p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
             >
               {article.isBreaking && (
                 <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded-full px-2.5 py-0.5">
@@ -90,7 +91,7 @@ export function NewsCard() {
               <p className="text-gray-400 dark:text-gray-500 text-xs mt-2">
                 {format(new Date(article.publishedAt), 'MMM d, yyyy')} • {article.source}
               </p>
-            </a>
+            </div>
           ))
         )}
       </div>
