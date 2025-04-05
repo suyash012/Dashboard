@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Plus } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks';
-import { markAllAsRead } from '@/lib/redux/slices/notificationsSlice';
+import { markAllAsRead, addNotification } from '@/lib/redux/slices/notificationsSlice';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,7 +15,7 @@ export function NotificationBell() {
 
   // Flash notification when new ones arrive
   useEffect(() => {
-    if (unreadNotificationsCount > 0) {
+    if (notifications.length > 0) {
       const latestNotification = notifications[0];
       if (!latestNotification.read) {
         // Show toast for the newest notification
@@ -26,26 +26,91 @@ export function NotificationBell() {
         });
       }
     }
-  }, [unreadNotificationsCount]);
+  }, [notifications.length, toast]);
+  
+  // Automatically add a test notification when component mounts
+  useEffect(() => {
+    const initialNotification = setTimeout(() => {
+      dispatch(addNotification({
+        type: 'price_alert',
+        message: 'Welcome! This is a test notification to show that alerts are working'
+      }));
+    }, 2000);
+    
+    return () => clearTimeout(initialNotification);
+  }, [dispatch]);
 
   const handleMarkAllAsRead = () => {
     dispatch(markAllAsRead());
   };
+  
+  const addTestPriceAlert = () => {
+    const message = 'Bitcoin price changed by 3.5%';
+    dispatch(addNotification({
+      type: 'price_alert',
+      message
+    }));
+    
+    toast({
+      title: 'Test Price Alert Created',
+      description: message,
+      variant: "default",
+    });
+  };
+  
+  const addTestWeatherAlert = () => {
+    const message = 'Severe weather warning for New York';
+    dispatch(addNotification({
+      type: 'weather_alert',
+      message
+    }));
+    
+    toast({
+      title: 'Test Weather Alert Created',
+      description: message,
+      variant: "default",
+    });
+  };
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setNotificationsOpen(!notificationsOpen)}
-        className="relative p-1 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-        aria-label="Notifications"
-      >
-        <Bell className="h-6 w-6" />
-        {unreadNotificationsCount > 0 && (
-          <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">
-            {unreadNotificationsCount}
-          </span>
-        )}
-      </button>
+      <div className="flex items-center gap-2">
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={() => setNotificationsOpen(!notificationsOpen)}
+            className="relative p-1 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Notifications"
+          >
+            <Bell className="h-6 w-6" />
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">
+                {unreadNotificationsCount}
+              </span>
+            )}
+          </button>
+          
+          <div className="flex flex-col">
+            <button 
+              onClick={addTestPriceAlert}
+              className="p-1 rounded-full text-blue-600 hover:bg-blue-100 animate-pulse"
+              title="Click to add test price alert"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            <button 
+              onClick={addTestWeatherAlert}
+              className="p-1 rounded-full text-amber-600 hover:bg-amber-100 animate-pulse"
+              title="Click to add test weather alert"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="text-xs bg-blue-50 text-blue-800 px-2 py-1 rounded-md dark:bg-blue-900/50 dark:text-blue-300">
+          Click + to test notifications
+        </div>
+      </div>
 
       {notificationsOpen && (
         <div
