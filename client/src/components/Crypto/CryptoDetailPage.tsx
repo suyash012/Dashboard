@@ -278,7 +278,7 @@ export function CryptoDetailPage({ id }: CryptoDetailPageProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Market Rank</span>
-                <span className="font-medium">#{cryptoDetail.id === 'bitcoin' ? 1 : (cryptoDetail.id === 'ethereum' ? 2 : 3)}</span>
+                <span className="font-medium">#{cryptoDetail.coinId === 'bitcoin' ? 1 : (cryptoDetail.coinId === 'ethereum' ? 2 : 3)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Last Updated</span>

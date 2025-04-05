@@ -1,7 +1,8 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface CryptoData {
-  id: string;
+  id: number;
+  coinId: string;
   name: string;
   symbol: string;
   price: number;
@@ -76,7 +77,7 @@ const cryptoSlice = createSlice({
   reducers: {
     updateCryptoPrice: (state, action: PayloadAction<{ id: string; price: number }>) => {
       const { id, price } = action.payload;
-      const cryptoIndex = state.cryptos.findIndex(crypto => crypto.id === id);
+      const cryptoIndex = state.cryptos.findIndex(crypto => crypto.coinId === id);
       
       if (cryptoIndex >= 0) {
         const oldPrice = state.cryptos[cryptoIndex].price;
@@ -116,7 +117,7 @@ const cryptoSlice = createSlice({
       })
       .addCase(fetchCryptoDetailData.fulfilled, (state, action) => {
         state.loading = false;
-        state.cryptoDetails[action.payload.id] = action.payload;
+        state.cryptoDetails[action.payload.coinId] = action.payload;
       })
       .addCase(fetchCryptoDetailData.rejected, (state, action) => {
         state.loading = false;

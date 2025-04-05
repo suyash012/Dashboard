@@ -109,7 +109,7 @@ export function CryptoCard({ data, loading, error }: CryptoCardProps) {
         {data?.map((crypto) => (
           <div 
             key={crypto.id}
-            onClick={() => window.location.href = `/crypto/${encodeURIComponent(crypto.id)}`}
+            onClick={() => window.location.href = `/crypto/${encodeURIComponent(crypto.coinId)}`}
             className="block p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
           >
             <div className="flex items-center justify-between">
@@ -122,11 +122,11 @@ export function CryptoCard({ data, loading, error }: CryptoCardProps) {
                     {crypto.name}
                     <Star
                       className={`h-4 w-4 ml-1 cursor-pointer ${
-                        favoriteCryptos.includes(crypto.id) ? 'text-amber-400 fill-amber-400' : 'text-gray-400'
+                        favoriteCryptos.includes(crypto.coinId) ? 'text-amber-400 fill-amber-400' : 'text-gray-400'
                       }`}
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent navigation when clicking the star
-                        handleToggleFavorite(crypto.id, e);
+                        handleToggleFavorite(crypto.coinId, e);
                       }}
                     />
                   </h4>

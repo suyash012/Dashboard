@@ -57,7 +57,7 @@ export function setupWebSocketConnection() {
 function handlePriceAlert(data: { id: string; name: string; price: number; change: number }) {
   const { id, name, price, change } = data;
   
-  // Update crypto price in store
+  // Update crypto price in store using coinId (id from the message)
   store.dispatch(updateCryptoPrice({ id, price }));
   
   // Add notification for significant price changes (e.g., > 1%)
