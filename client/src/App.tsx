@@ -6,15 +6,19 @@ import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/index";
 import CryptoDetailPage from "@/pages/crypto/[id]";
 import WeatherDetailPage from "@/pages/weather/[city]";
+import AuthPage from "@/pages/auth-page";
 import { useEffect } from "react";
 import { setupWebSocketConnection } from "./lib/websocket";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={HomePage} />
-      <Route path="/crypto/:id" component={CryptoDetailPage} />
-      <Route path="/weather/:city" component={WeatherDetailPage} />
+      <ProtectedRoute path="/" component={HomePage} />
+      <ProtectedRoute path="/crypto/:id" component={CryptoDetailPage} />
+      <ProtectedRoute path="/weather/:city" component={WeatherDetailPage} />
+      <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -30,8 +34,10 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

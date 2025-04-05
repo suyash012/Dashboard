@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CloudLightning, CloudIcon, NewspaperIcon, HomeIcon, SunIcon, MoonIcon } from 'lucide-react';
+import { UserMenu } from '@/components/ui/user-menu';
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -101,7 +102,7 @@ export default function Sidebar({ isMobile = false }: SidebarProps) {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
           <button
             onClick={toggleDarkMode}
             className="flex items-center px-4 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg w-full"
@@ -115,6 +116,11 @@ export default function Sidebar({ isMobile = false }: SidebarProps) {
               {isDarkMode ? 'Light Mode' : 'Dark Mode'}
             </span>
           </button>
+          
+          <div className="flex items-center px-4 py-2">
+            <div className="xl:inline hidden mr-3 text-sm text-gray-600 dark:text-gray-300">Account</div>
+            <UserMenu />
+          </div>
         </div>
       </div>
     </>

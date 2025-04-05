@@ -11,6 +11,8 @@ import {
   InsertFavorite,
 } from "@shared/schema";
 
+import session from "express-session";
+
 export interface IStorage {
   // User methods (keeping original)
   getUser(id: number): Promise<User | undefined>;
@@ -37,7 +39,14 @@ export interface IStorage {
   getFavoritesByUserId(userId: number, type: 'city' | 'crypto'): Promise<Favorite[]>;
   createFavorite(favorite: InsertFavorite): Promise<Favorite>;
   deleteFavorite(userId: number, type: 'city' | 'crypto', itemId: string): Promise<boolean>;
+  
+  // Session storage
+  sessionStore: session.Store;
 }
+
+import createMemoryStore from "memorystore";
+
+const MemoryStore = createMemoryStore(session);
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
@@ -52,6 +61,8 @@ export class MemStorage implements IStorage {
   private newsCurrentId: number;
   private favoritesCurrentId: number;
 
+  public sessionStore: session.Store;
+
   constructor() {
     this.users = new Map();
     this.weather = new Map();
@@ -64,6 +75,11 @@ export class MemStorage implements IStorage {
     this.cryptoCurrentId = 1;
     this.newsCurrentId = 1;
     this.favoritesCurrentId = 1;
+    
+    // Initialize memory store for sessions with cleanup
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // 24 hours
+    });
   }
 
   // User methods (keeping original)
@@ -97,7 +113,8 @@ export class MemStorage implements IStorage {
   
   async createWeather(weather: InsertWeather): Promise<Weather> {
     const id = this.weatherCurrentId++;
-    const newWeather: Weather = { ...weather, id };
+    const timestamp = weather.timestamp || new Date();
+    const newWeather: Weather = { ...weather, id, timestamp };
     this.weather.set(weather.city.toLowerCase(), newWeather);
     return newWeather;
   }
@@ -127,7 +144,8 @@ export class MemStorage implements IStorage {
   
   async createCrypto(crypto: InsertCrypto): Promise<Crypto> {
     const id = this.cryptoCurrentId++;
-    const newCrypto: Crypto = { ...crypto, id };
+    const lastUpdated = crypto.lastUpdated || new Date();
+    const newCrypto: Crypto = { ...crypto, id, lastUpdated };
     this.crypto.set(crypto.coinId.toLowerCase(), newCrypto);
     return newCrypto;
   }
@@ -154,7 +172,8 @@ export class MemStorage implements IStorage {
   
   async createNews(news: InsertNews): Promise<News> {
     const id = this.newsCurrentId++;
-    const newNews: News = { ...news, id };
+    const isBreaking = news.isBreaking ?? null;
+    const newNews: News = { ...news, id, isBreaking };
     this.newsList.push(newNews);
     return newNews;
   }

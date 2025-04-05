@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { WebSocketServer, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import fetch from 'node-fetch';
+import { setupAuth } from './auth';
 
 // API Keys
 const OPENWEATHERMAP_API_KEY = process.env.OPENWEATHERMAP_API_KEY;
@@ -536,6 +537,9 @@ function setupWebSocketServer(server: Server) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
+  
   // Initialize data on startup
   try {
     await fetchAndStoreWeatherData();
