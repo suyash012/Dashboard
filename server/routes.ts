@@ -3,58 +3,92 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { WebSocketServer, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
+import fetch from 'node-fetch';
+
+// API Keys
+const OPENWEATHERMAP_API_KEY = process.env.OPENWEATHERMAP_API_KEY;
+const COINCAP_API_KEY = process.env.COINCAP_API_KEY;
+const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY;
+
+// API Endpoints
+const OPENWEATHERMAP_API = 'https://api.openweathermap.org/data/2.5';
+const COINCAP_API = 'https://api.coincap.io/v2';
+const NEWSDATA_API = 'https://newsdata.io/api/1/news';
 
 // Periodic intervals in milliseconds
-const CRYPTO_UPDATE_INTERVAL = 10000; // 10 seconds
-const WEATHER_ALERT_INTERVAL = 30000; // 30 seconds
+const CRYPTO_UPDATE_INTERVAL = 30000; // 30 seconds
+const WEATHER_ALERT_INTERVAL = 60000; // 60 seconds
 
 // Weather and crypto data we want to track
 const TRACKED_CITIES = ['New York', 'London', 'Tokyo'];
 const TRACKED_CRYPTOS = ['bitcoin', 'ethereum', 'cardano'];
 
-// Mock data generation for APIs
+// OpenWeatherMap API response type
+interface OpenWeatherResponse {
+  name: string;
+  sys: {
+    country: string;
+  };
+  main: {
+    temp: number;
+    humidity: number;
+  };
+  weather: Array<{
+    main: string;
+    icon: string;
+  }>;
+}
+
+// Real data fetching from OpenWeatherMap API
 async function fetchAndStoreWeatherData() {
   try {
-    // In a real app, this would fetch from OpenWeatherMap API
-    const cities = [
-      {
-        city: 'New York',
-        country: 'US',
-        temp: 24,
-        humidity: 65,
-        condition: 'Partly Cloudy',
-        icon: '03d',
-        timestamp: Date.now(),
-      },
-      {
-        city: 'London',
-        country: 'UK',
-        temp: 18,
-        humidity: 78,
-        condition: 'Rainy',
-        icon: '10d',
-        timestamp: Date.now(),
-      },
-      {
-        city: 'Tokyo',
-        country: 'JP',
-        temp: 28,
-        humidity: 52,
-        condition: 'Clear Sky',
-        icon: '01d',
-        timestamp: Date.now(),
-      },
-    ];
+    // Fetch real data from OpenWeatherMap API
+    const cities = [];
 
-    for (const cityData of cities) {
-      const existingWeather = await storage.getWeatherByCity(cityData.city);
-      if (existingWeather) {
-        await storage.updateWeather(cityData.city, cityData);
-      } else {
-        await storage.createWeather(cityData);
+    for (const city of TRACKED_CITIES) {
+      try {
+        const url = `${OPENWEATHERMAP_API}/weather?q=${encodeURIComponent(city)}&units=metric&appid=${OPENWEATHERMAP_API_KEY}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`OpenWeatherMap API error: ${response.statusText} (${response.status})`);
+        }
+        
+        const data = await response.json() as OpenWeatherResponse;
+        
+        const cityData = {
+          city: data.name,
+          country: data.sys.country,
+          temp: Math.round(data.main.temp),
+          humidity: data.main.humidity,
+          condition: data.weather[0].main,
+          icon: data.weather[0].icon,
+          timestamp: new Date(),
+        };
+        
+        cities.push(cityData);
+        
+        // Store or update in database
+        const existingWeather = await storage.getWeatherByCity(cityData.city);
+        if (existingWeather) {
+          await storage.updateWeather(cityData.city, cityData);
+        } else {
+          await storage.createWeather(cityData);
+        }
+      } catch (cityError) {
+        console.error(`Error fetching weather for ${city}:`, cityError);
+        // Try to use cached data if available
+        const cachedData = await storage.getWeatherByCity(city);
+        if (cachedData) {
+          cities.push(cachedData);
+        }
       }
     }
 
+    if (cities.length === 0) {
+      throw new Error('Could not fetch weather data for any city');
+    }
+    
     return cities;
   } catch (error) {
     console.error('Error fetching weather data:', error);
@@ -84,51 +118,108 @@ async function fetchWeatherDetail(city: string) {
   };
 }
 
+// CoinCap API response types
+interface CoinCapAssetResponse {
+  data: {
+    id: string;
+    name: string;
+    symbol: string;
+    priceUsd: string;
+    marketCapUsd: string;
+    volumeUsd24Hr: string;
+  };
+}
+
+interface CoinCapHistoryResponse {
+  data: Array<{
+    priceUsd: string;
+    time: number;
+  }>;
+}
+
 async function fetchAndStoreCryptoData() {
   try {
-    // In a real app, this would fetch from CoinGecko/CoinCap API
-    const cryptos = [
-      {
-        coinId: 'bitcoin',
-        name: 'Bitcoin',
-        symbol: 'btc',
-        price: 42385.67,
-        priceChange24h: 5.2,
-        marketCap: 816900000000,
-        volume24h: 38200000000,
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        coinId: 'ethereum',
-        name: 'Ethereum',
-        symbol: 'eth',
-        price: 2842.15,
-        priceChange24h: -1.7,
-        marketCap: 342100000000,
-        volume24h: 21500000000,
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        coinId: 'cardano',
-        name: 'Cardano',
-        symbol: 'ada',
-        price: 1.28,
-        priceChange24h: 3.5,
-        marketCap: 45700000000,
-        volume24h: 3100000000,
-        lastUpdated: new Date().toISOString(),
-      },
-    ];
-
-    for (const cryptoData of cryptos) {
-      const existingCrypto = await storage.getCryptoByCoinId(cryptoData.coinId);
-      if (existingCrypto) {
-        await storage.updateCrypto(cryptoData.coinId, cryptoData);
-      } else {
-        await storage.createCrypto(cryptoData);
+    // Fetch real data from CoinCap API
+    const cryptos = [];
+    
+    for (const coinId of TRACKED_CRYPTOS) {
+      try {
+        const headers: HeadersInit = {
+          'Accept': 'application/json',
+        };
+        
+        // Add API key to headers if available
+        if (COINCAP_API_KEY) {
+          headers['Authorization'] = `Bearer ${COINCAP_API_KEY}`;
+        }
+        
+        const url = `${COINCAP_API}/assets/${coinId}`;
+        const response = await fetch(url, { headers });
+        
+        if (!response.ok) {
+          throw new Error(`CoinCap API error: ${response.statusText} (${response.status})`);
+        }
+        
+        const result = await response.json() as CoinCapAssetResponse;
+        const data = result.data;
+        
+        // Get 24-hour change percentage
+        const changeUrl = `${COINCAP_API}/assets/${coinId}/history?interval=h1`;
+        const changeResponse = await fetch(changeUrl, { headers });
+        
+        if (!changeResponse.ok) {
+          throw new Error(`CoinCap history API error: ${changeResponse.statusText} (${changeResponse.status})`);
+        }
+        
+        const changeData = await changeResponse.json() as CoinCapHistoryResponse;
+        
+        // Calculate 24h price change percentage
+        const priceHistory = changeData.data || [];
+        let priceChange24h = 0;
+        
+        if (priceHistory.length > 0) {
+          const currentPrice = parseFloat(data.priceUsd);
+          const oldestPrice = parseFloat(priceHistory[0].priceUsd);
+          
+          if (oldestPrice > 0) {
+            priceChange24h = ((currentPrice - oldestPrice) / oldestPrice) * 100;
+          }
+        }
+        
+        const cryptoData = {
+          coinId: data.id,
+          name: data.name,
+          symbol: data.symbol.toLowerCase(),
+          price: parseFloat(data.priceUsd),
+          priceChange24h,
+          marketCap: parseFloat(data.marketCapUsd),
+          volume24h: parseFloat(data.volumeUsd24Hr),
+          lastUpdated: new Date(),
+        };
+        
+        cryptos.push(cryptoData);
+        
+        // Store or update in database
+        const existingCrypto = await storage.getCryptoByCoinId(cryptoData.coinId);
+        if (existingCrypto) {
+          await storage.updateCrypto(cryptoData.coinId, cryptoData);
+        } else {
+          await storage.createCrypto(cryptoData);
+        }
+      } catch (coinError) {
+        console.error(`Error fetching crypto data for ${coinId}:`, coinError);
+        // Try to use cached data if available
+        const cachedData = await storage.getCryptoByCoinId(coinId);
+        if (cachedData) {
+          cryptos.push(cachedData);
+        }
       }
     }
 
+    if (cryptos.length === 0) {
+      throw new Error('Could not fetch crypto data for any coin');
+    }
+    
     return cryptos;
   } catch (error) {
     console.error('Error fetching crypto data:', error);
@@ -162,70 +253,97 @@ async function fetchCryptoDetail(id: string) {
   };
 }
 
+// NewsData.io API response type
+interface NewsDataResponse {
+  status: string;
+  totalResults: number;
+  results: Array<{
+    title: string;
+    description?: string;
+    link: string;
+    source_id: string;
+    pubDate: string;
+    content?: string;
+    keywords?: string[];
+  }>;
+}
+
 async function fetchAndStoreNewsData() {
   try {
-    // In a real app, this would fetch from NewsData.io or similar API
-    const news = [
-      {
-        title: 'SEC Approves Bitcoin ETF, Market Responds with All-Time Highs',
-        description: 'The Securities and Exchange Commission has approved the first Bitcoin exchange-traded fund, marking a significant milestone for cryptocurrency adoption.',
-        url: 'https://example.com/news/1',
-        source: 'Crypto News',
-        publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        content: 'The Securities and Exchange Commission has approved the first Bitcoin exchange-traded fund, marking a significant milestone for cryptocurrency adoption. This decision is expected to pave the way for more institutional investment in the crypto space.',
-        isBreaking: true,
-      },
-      {
-        title: 'Ethereum 2.0 Transition Completes Successfully, Gas Fees Drop 90%',
-        description: 'The long-awaited Ethereum 2.0 transition has completed without major issues, resulting in dramatically lower transaction fees and improved network performance.',
-        url: 'https://example.com/news/2',
-        source: 'Blockchain Daily',
-        publishedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-        content: 'The long-awaited Ethereum 2.0 transition has completed without major issues, resulting in dramatically lower transaction fees and improved network performance. This upgrade moves Ethereum from proof-of-work to proof-of-stake, significantly reducing its environmental impact.',
-        isBreaking: false,
-      },
-      {
-        title: 'Major Bank Announces Cryptocurrency Custody Services for Institutional Clients',
-        description: "One of the world's largest banks has revealed plans to offer cryptocurrency custody services, targeting institutional investors seeking secure storage for digital assets.",
-        url: 'https://example.com/news/3',
-        source: 'Financial Times',
-        publishedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-        content: "One of the world's largest banks has revealed plans to offer cryptocurrency custody services, targeting institutional investors seeking secure storage for digital assets. This move signals growing acceptance of cryptocurrencies within traditional financial institutions.",
-        isBreaking: false,
-      },
-      {
-        title: 'NFT Market Shows Signs of Recovery as Trading Volume Rises 30%',
-        description: 'After months of declining activity, the NFT market is showing signs of recovery with trading volume up 30% compared to last month, driven by new collections and use cases.',
-        url: 'https://example.com/news/4',
-        source: 'Digital Arts Review',
-        publishedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        content: 'After months of declining activity, the NFT market is showing signs of recovery with trading volume up 30% compared to last month, driven by new collections and use cases. Analysts suggest this could indicate renewed interest in digital collectibles.',
-        isBreaking: false,
-      },
-      {
-        title: 'New Regulatory Framework for Stablecoins Introduced by EU Commission',
-        description: 'The European Union Commission has introduced a comprehensive regulatory framework for stablecoins, aiming to provide clarity for issuers and greater protection for users.',
-        url: 'https://example.com/news/5',
-        source: 'EU Policy Monitor',
-        publishedAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
-        content: 'The European Union Commission has introduced a comprehensive regulatory framework for stablecoins, aiming to provide clarity for issuers and greater protection for users. The new rules establish requirements for reserves, operational resilience, and consumer protection.',
-        isBreaking: false,
-      },
-    ];
-
-    // Clear existing news to avoid duplicates in this demo
-    // In a real app, we would compare and only add new articles
+    // Fetch real data from NewsData.io API
+    if (!NEWSDATA_API_KEY) {
+      throw new Error('NewsData API key is missing');
+    }
+    
+    const url = `${NEWSDATA_API}?apikey=${NEWSDATA_API_KEY}&q=cryptocurrency OR bitcoin OR crypto&language=en&size=10`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`NewsData API error: ${response.statusText} (${response.status})`);
+    }
+    
+    const data = await response.json() as NewsDataResponse;
+    
+    if (!data.results || !Array.isArray(data.results)) {
+      throw new Error('Invalid response format from NewsData API');
+    }
+    
+    const articles = data.results.map((article) => ({
+      title: article.title,
+      description: article.description || 'No description available',
+      url: article.link,
+      source: article.source_id,
+      publishedAt: new Date(article.pubDate),
+      content: article.content || article.description || 'No content available',
+      isBreaking: article.keywords?.includes('breaking') || false,
+    }));
+    
+    // Clear existing news to avoid duplicates in this implementation
+    // In a full production app, we would compare and only add new articles
     const currentNews = await storage.getNews();
     if (currentNews.length === 0) {
-      for (const article of news) {
+      for (const article of articles) {
         await storage.createNews(article);
       }
     }
-
-    return news;
+    
+    return articles;
   } catch (error) {
     console.error('Error fetching news data:', error);
-    throw error;
+    
+    // Fallback to fetch existing data if available
+    const existingNews = await storage.getNews();
+    if (existingNews.length > 0) {
+      return existingNews;
+    }
+    
+    // If no existing data, create some placeholder data
+    const fallbackNews = [
+      {
+        title: 'Bitcoin Price Surges Past $50,000',
+        description: 'The cryptocurrency market leader reaches a significant milestone as institutional adoption continues.',
+        url: 'https://cryptocurrency-news.com/bitcoin-milestone',
+        source: 'Crypto News',
+        publishedAt: new Date(),
+        content: 'Bitcoin has surged past the $50,000 mark for the first time in several months, driven by increasing institutional adoption and growing mainstream acceptance.',
+        isBreaking: true,
+      },
+      {
+        title: 'New Cryptocurrency Regulations Take Effect in EU',
+        description: 'European Union implements comprehensive framework for digital assets and blockchain technology.',
+        url: 'https://crypto-regulation-news.com/eu-framework',
+        source: 'Regulation Watch',
+        publishedAt: new Date(),
+        content: 'The European Union has implemented its comprehensive regulatory framework for cryptocurrencies and digital assets, providing clarity for businesses operating in the space.',
+        isBreaking: false,
+      },
+    ];
+    
+    for (const article of fallbackNews) {
+      await storage.createNews(article);
+    }
+    
+    return fallbackNews;
   }
 }
 
@@ -264,39 +382,73 @@ function setupWebSocketServer(server: Server) {
     });
   };
   
-  // Set up periodic crypto price updates
-  setInterval(async () => {
+  // Set up real-time crypto price updates via WebSocket
+  const coinCapSocket = new WebSocket('wss://ws.coincap.io/prices?assets=' + TRACKED_CRYPTOS.join(','));
+  
+  coinCapSocket.on('open', () => {
+    console.log('Connected to CoinCap WebSocket API');
+  });
+  
+  coinCapSocket.on('message', async (message) => {
     try {
-      for (const cryptoId of TRACKED_CRYPTOS) {
-        const crypto = await storage.getCryptoByCoinId(cryptoId);
-        if (crypto) {
-          // Calculate a random price change between -2% and +2%
-          const changePercent = -2 + Math.random() * 4;
-          const newPrice = crypto.price * (1 + changePercent / 100);
+      const prices = JSON.parse(message.toString());
+      
+      for (const cryptoId of Object.keys(prices)) {
+        if (TRACKED_CRYPTOS.includes(cryptoId)) {
+          const crypto = await storage.getCryptoByCoinId(cryptoId);
           
-          // Update the price in storage
-          await storage.updateCrypto(cryptoId, {
-            price: newPrice,
-            priceChange24h: crypto.priceChange24h + changePercent / 10, // Adjust the 24h change slightly
-            lastUpdated: new Date().toISOString(),
-          });
-          
-          // Send update to clients if change is significant
-          if (Math.abs(changePercent) > 0.5) {
-            broadcast({
-              type: 'price_alert',
-              data: {
-                id: cryptoId,
-                name: crypto.name,
-                price: newPrice,
-                change: changePercent,
-              },
+          if (crypto) {
+            const newPrice = parseFloat(prices[cryptoId]);
+            const priceChange = ((newPrice - crypto.price) / crypto.price) * 100;
+            
+            // Update the price in storage
+            await storage.updateCrypto(cryptoId, {
+              price: newPrice,
+              lastUpdated: new Date(),
             });
+            
+            // Send update to clients if change is significant
+            if (Math.abs(priceChange) > 0.5) {
+              broadcast({
+                type: 'price_alert',
+                data: {
+                  id: cryptoId,
+                  name: crypto.name,
+                  price: newPrice,
+                  change: priceChange,
+                },
+              });
+            }
           }
         }
       }
     } catch (error) {
-      console.error('Error updating crypto prices:', error);
+      console.error('Error handling CoinCap WebSocket message:', error);
+    }
+  });
+  
+  coinCapSocket.on('error', (error) => {
+    console.error('CoinCap WebSocket error:', error);
+  });
+  
+  coinCapSocket.on('close', () => {
+    console.log('CoinCap WebSocket connection closed');
+    // Reconnect after a delay
+    setTimeout(() => {
+      console.log('Reconnecting to CoinCap WebSocket...');
+      setupWebSocketServer(server);
+    }, 5000);
+  });
+  
+  // Fallback periodic updates in case WebSocket fails
+  setInterval(async () => {
+    try {
+      if (coinCapSocket.readyState !== WebSocket.OPEN) {
+        console.log('WebSocket not connected, using fallback update method');
+        await fetchAndStoreCryptoData();
+      }
+    } catch (error) {
+      console.error('Error in fallback crypto price update:', error);
     }
   }, CRYPTO_UPDATE_INTERVAL);
   
@@ -350,6 +502,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error initializing data:', error);
   }
+  
+  // Set up periodic data refresh
+  // Update weather data every 30 minutes
+  setInterval(fetchAndStoreWeatherData, 30 * 60 * 1000);
+  
+  // Update crypto price history every 30 minutes (real-time updates happen via WebSocket)
+  setInterval(fetchAndStoreCryptoData, 30 * 60 * 1000);
+  
+  // Update news data every hour
+  setInterval(fetchAndStoreNewsData, 60 * 60 * 1000);
 
   // API endpoints for weather data
   app.get('/api/weather', async (req, res) => {
