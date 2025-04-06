@@ -139,56 +139,65 @@ While the application is configured to use OpenWeatherMap, CoinCap, and NewsData
 - Server-side changes require a manual restart (`Ctrl+C` and `npm run dev` again)
 - WebSocket messages can be monitored in the browser console
 
-## License
-
-MIT License
-
 ## Deployment to Vercel
 
 ### Prerequisites
 
 - Vercel account
-- Vercel CLI installed
+- Vercel CLI installed (`npm install -g vercel`)
 
 ### Setup Steps
 
-1. Create a vercel.json file with the following content:
-```json
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "server/index.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "build" }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/ws",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "client/build/$1"
-    }
-  ]
-}
-```
+1. Configure your build settings in `vercel.json`:
+   ```json
+   {
+     "version": 2,
+     "builds": [
+       {
+         "src": "server/index.ts",
+         "use": "@vercel/node"
+       },
+       {
+         "src": "client/package.json",
+         "use": "@vercel/static-build",
+         "config": { "distDir": "build" }
+       }
+     ],
+     "routes": [
+       {
+         "src": "/api/(.*)",
+         "dest": "server/index.ts"
+       },
+       {
+         "src": "/ws",
+         "dest": "server/index.ts"
+       },
+       {
+         "src": "/(.*)",
+         "dest": "client/build/$1"
+       }
+     ]
+   }
+   ```
 
-2. Deploy your application using the Vercel dashboard or CLI.
+2. Add a build script to the client's package.json:
+   ```json
+   "build": "vite build",
+   ```
+
+3. Login to Vercel:
+   ```
+   vercel login
+   ```
+
+4. Deploy the application:
+   ```
+   vercel
+   ```
 
 ### Environment Variables in Vercel
 
-Add the following environment variables in the Vercel dashboard:
+Add the following environment variables in the Vercel dashboard under your project settings:
 
 - `NEWSDATA_API_KEY`: Your NewsData.io API key
 - `OPENWEATHERMAP_API_KEY`: Your OpenWeatherMap API key
@@ -196,8 +205,29 @@ Add the following environment variables in the Vercel dashboard:
 - `SESSION_SECRET`: Random string for session encryption
 - `NODE_ENV`: Set to "production"
 
-### Deployment Considerations
+### Vercel Deployment Considerations
 
-- WebSockets require a Vercel Pro plan
-- Serverless functions have timeouts and cold starts
-- Configure custom domains in the Vercel dashboard
+1. **WebSockets**: Ensure your Vercel plan supports WebSocket connections (requires a Pro plan)
+2. **Serverless Functions**: Vercel uses serverless functions, so long-running connections may time out
+3. **Cold Starts**: Be aware of cold starts with serverless functions
+4. **Custom Domains**: Configure a custom domain in the Vercel dashboard
+5. **CORS Configuration**: Update CORS settings if using a different domain for API
+
+## Required Environment Variables
+
+- `NEWSDATA_API_KEY`: API key for NewsData.io
+- `OPENWEATHERMAP_API_KEY`: API key for OpenWeatherMap
+- `COINCAP_API_KEY`: API key for CoinCap
+- `SESSION_SECRET`: Random string for encrypting session data
+
+### Optional Environment Variables
+
+- `PORT`: Override the default port (5000)
+- `NODE_ENV`: Set to "production" in production environments
+- `LOG_LEVEL`: Control logging verbosity (default: "info")
+- `DISABLE_WEBSOCKETS`: Set to "true" to disable WebSocket connections
+- `API_CACHE_DURATION`: Time in seconds to cache API responses (default: 300)
+
+## License
+
+MIT License
