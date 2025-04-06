@@ -139,56 +139,49 @@ While the application is configured to use OpenWeatherMap, CoinCap, and NewsData
 - Server-side changes require a manual restart (`Ctrl+C` and `npm run dev` again)
 - WebSocket messages can be monitored in the browser console
 
-## License
-
-MIT License
-
-## Deployment to Vercel
+## Deployment to Render
 
 ### Prerequisites
 
-- Vercel account
-- Vercel CLI installed
+- Render account (register at render.com)
+- Git repository connected to Render
 
 ### Setup Steps
 
-1. Create a vercel.json file with the following content:
-```json
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "server/index.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "build" }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/ws",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "client/build/$1"
-    }
-  ]
-}
-```
+1. Create a `render.yaml` file in the root directory with the following content:
+   ```yaml
+   services:
+     - type: web
+       name: dashboard
+       env: node
+       buildCommand: >
+         npm install &&
+         cd client && npm install && npm run build &&
+         cd .. && mkdir -p server/public &&
+         cp -R dist/public/* server/public/
+       startCommand: npm run dev
+       envVars:
+         - key: OPENWEATHERMAP_API_KEY
+           value: your_openweathermap_api_key
+         - key: COINCAP_API_KEY
+           value: your_coincap_api_key
+         - key: NEWSDATA_API_KEY
+           value: your_newsdata_api_key
+         - key: SESSION_SECRET
+           value: your_session_secret
+       healthCheckPath: /api/health
+   ```
 
-2. Deploy your application using the Vercel dashboard or CLI.
+2. On Render, create a new Web Service:
+   - Connect your GitHub repository
+   - Select "Use render.yaml" as your deployment configuration
+   - Click "Create Web Service"
 
-### Environment Variables in Vercel
+3. Render will automatically deploy your application using the configuration from render.yaml
 
-Add the following environment variables in the Vercel dashboard:
+### Environment Variables in Render
+
+Render.yaml already contains the necessary environment variables, but you can also add or modify them in the Render dashboard:
 
 - `NEWSDATA_API_KEY`: Your NewsData.io API key
 - `OPENWEATHERMAP_API_KEY`: Your OpenWeatherMap API key
@@ -196,8 +189,69 @@ Add the following environment variables in the Vercel dashboard:
 - `SESSION_SECRET`: Random string for session encryption
 - `NODE_ENV`: Set to "production"
 
-### Deployment Considerations
+### Render Deployment Considerations
 
-- WebSockets require a Vercel Pro plan
-- Serverless functions have timeouts and cold starts
-- Configure custom domains in the Vercel dashboard
+1. **WebSocket Support**: Render fully supports WebSockets, ensuring your real-time notifications work properly
+2. **Continuous Deployment**: Automatically deploys when you push to your repository
+3. **Custom Domains**: Easily add your own domain (paid feature)
+4. **Generous Free Tier**: Includes 750 hours of runtime per month
+
+### Troubleshooting Render Deployments
+
+If you encounter issues:
+
+1. Check the Render logs for error messages
+2. Verify your environment variables are set correctly
+3. Ensure the build command is properly copying files from `dist/public/` to `server/public/`
+4. Check that your application's health check endpoint is responding correctly
+
+## Required Environment Variables
+
+- `NEWSDATA_API_KEY`: API key for NewsData.io
+- `OPENWEATHERMAP_API_KEY`: API key for OpenWeatherMap
+- `COINCAP_API_KEY`: API key for CoinCap
+- `SESSION_SECRET`: Random string for encrypting session data
+
+### Optional Environment Variables
+
+- `PORT`: Override the default port (5000)
+- `NODE_ENV`: Set to "production" in production environments
+- `LOG_LEVEL`: Control logging verbosity (default: "info")
+- `DISABLE_WEBSOCKETS`: Set to "true" to disable WebSocket connections
+- `API_CACHE_DURATION`: Time in seconds to cache API responses (default: 300)
+
+## Design Decisions
+
+### Architecture
+
+The application uses a monorepo structure with separated client and server code but shared types. This architecture allows for:
+- Type safety across the stack
+- Simplified deployment to services like Render
+- Shared validation logic between client and server
+
+### State Management
+
+We chose Redux for global state management due to:
+- Centralized state for complex real-time data
+- DevTools for debugging state changes
+- Middleware support for handling WebSocket events
+
+### UI Framework
+
+ShadCN/UI with Tailwind CSS was selected because:
+- Component-based architecture aligns with React principles
+- Highly customizable design system
+- Excellent responsive behavior with minimal effort
+- Accessible components out of the box
+
+### Data Fetching
+
+TanStack Query (React Query) was chosen for data fetching because:
+- Built-in caching reduces API calls
+- Automatic refetching ensures fresh data
+- Loading and error states simplify UI handling
+- Stale-while-revalidate pattern improves perceived performance
+
+## License
+
+MIT License

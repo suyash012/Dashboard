@@ -2,8 +2,12 @@ services:
   - type: web
     name: dashboard
     env: node
-    buildCommand: npm install && cd client && npm install && npm run build && cd .. && mkdir -p server/public && cp -r client/dist/* server/public/
-    startCommand: npm start
+    buildCommand: >
+      npm install &&
+      cd client && npm install && npm run build &&
+      cd .. && mkdir -p server/public &&
+      cp -R dist/public/* server/public/
+    startCommand: npm run dev
     envVars:
       - key: OPENWEATHERMAP_API_KEY
         value: a4fa92c27a44e3779170a109709d2930
