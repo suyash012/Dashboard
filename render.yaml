@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: dashboard
+    env: node
+    buildCommand: npm install && cd client && npm install && npm run build && cd ..
+    startCommand: npm start
+    envVars:
+      - key: OPENWEATHERMAP_API_KEY
+        value: a4fa92c27a44e3779170a109709d2930
+      - key: COINCAP_API_KEY
+        value: 16c58799-fd64-449d-b74f-53400e553f42
+      - key: NEWSDATA_API_KEY
+        value: pub_7852793195b6cf334b12f2cdc635bd8ccb04e
+      - key: SESSION_SECRET
+        value: 7U1XBIEoln5nZ0VGZC2a2sD1tEz/bKrkMuTesROEf7R21UJN/YyajZa8y6vJykhoAkmX6N4g0kQovP9B7cW6YQ==
+    healthCheckPath: /api/health
